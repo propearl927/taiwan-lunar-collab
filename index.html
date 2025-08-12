@@ -157,6 +157,29 @@
   font-weight: 500;
 }
 
+  /* --- UI enhancements --- */
+  html{scroll-behavior:smooth}
+  header{transition:box-shadow .3s ease, background-color .3s ease}
+  header.scrolled{box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  .brand-dot{animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 0 18px rgba(103,232,249,.9)}50%{transform:scale(1.25);box-shadow:0 0 28px rgba(103,232,249,1)}}
+  .card,.card2{transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease}
+  .card:hover,.card2:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(103,232,249,.12)}
+  .badge{transition:transform .2s ease, background-color .2s ease}
+  .badge:hover{transform:translateY(-2px)}
+  .pbtn{position:relative;transition:transform .15s ease, background-color .2s ease, border-color .2s ease}
+  .pbtn:active{transform:scale(.97)}
+  nav a{position:relative}
+  nav a::after{content:"";position:absolute;left:0;right:100%;bottom:-6px;height:2px;background:linear-gradient(90deg,#67e8f9,#c084fc);transition:right .25s ease}
+  nav a:hover::after{right:0}
+  /* reveal */
+  .reveal{opacity:0;transform:translateY(10px);transition:opacity .6s ease, transform .6s ease}
+  .reveal.show{opacity:1;transform:none}
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    html{scroll-behavior:auto}
+  }
 </style>
 </head>
 <body>
@@ -480,20 +503,21 @@ function resultCard(d){
   kv.appendChild(el('div',{},'Contact'));
   kv.appendChild(el('div',{}, contactNode(d.contact)));
 
-  return el('div',{class:'card2'},[head,payloads,kv]);
+  return el('div',{class:'card2 reveal'},[head,payloads,kv]);
 }
 function renderResults(){
   const list = DATA.filter(passFilters);
   const mount = $('#results'); mount.innerHTML='';
   if(list.length===0){ mount.appendChild(el('div',{class:'card2'},'No results.')); return; }
   list.forEach(d=>mount.appendChild(resultCard(d)));
+  if(typeof setupRevealObserver==='function') setupRevealObserver();
 }
 
 /* ================= Overview (four payloads) ================= */
 function renderOverview(){
   const grid = $('#payloadGrid'); grid.innerHTML='';
   PAYLOADS.forEach(p=>{
-    const card = el('div',{class:'card'});
+    const card = el('div',{class:'card reveal'});
     const head = el('div',{class:'row'});
     const badge = el('span',{class:'badge',style:'font-size:16px;display:flex;align-items:center;gap:6px'},[
   el('span',{},p.emoji || '📦'), 
@@ -531,7 +555,7 @@ function initMap(){
     const coord = COUNTRY_COORDS[country]; if(!coord) return;
     const marker = L.circleMarker([coord[1],coord[0]],{radius:7,color:'#67e8f9',weight:2,fillColor:'#67e8f9',fillOpacity:.7}).addTo(map);
     marker.bindTooltip(`${country} • ${list.length}`,{direction:'top',offset:[0,-8],opacity:.9});
-    marker.on('click',()=>renderSelectedCountry(country,list));
+    marker.on('click',()=>{ pulseAt(marker.getLatLng()); renderSelectedCountry(country,list); });
   });
 
   renderSummary();
@@ -601,7 +625,7 @@ function renderTech(){
   grid.className = 'tech-grid';
   
   techCategories.forEach(category => {
-    const card = el('div', {class: 'tech-card'});
+    const card = el('div', {class: 'tech-card reveal'});
     
     const icon = el('div', {class: 'tech-icon'}, category.icon);
     const title = el('h3', {class: 'tech-title'}, category.title);
@@ -617,12 +641,45 @@ function renderTech(){
   });
 }
 
+/* ================= Anim helpers ================= */
+function animateCounter(el, to, duration=900){
+  const start = 0; const t0 = performance.now();
+  function frame(now){
+    const p = Math.min(1,(now - t0)/duration);
+    el.textContent = String(Math.floor(start + (to - start)*p));
+    if(p<1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+function setupRevealObserver(){
+  const io = new IntersectionObserver((entries)=>{
+    for(const e of entries){ if(e.isIntersecting){ e.target.classList.add('show'); io.unobserve(e.target); } }
+  },{threshold:.15});
+  $$('.reveal').forEach(n=>io.observe(n));
+  $$('#home .card, #overview .card, #mapsec .card, #mapsec .panel, #tech .tech-card').forEach(n=>{ if(!n.classList.contains('reveal')){ n.classList.add('reveal'); io.observe(n); } });
+}
+function applyHeaderScrollShadow(){
+  const h=document.querySelector('header'); if(!h) return;
+  const onScroll=()=>h.classList.toggle('scrolled',window.scrollY>6);
+  onScroll(); addEventListener('scroll',onScroll,{passive:true});
+}
+function pulseAt(latlng){
+  if(!map) return; const maxR=900000; const dur=800;
+  const circle=L.circle(latlng,{radius:0,color:'#67e8f9',weight:1,opacity:.7,fillOpacity:.07}).addTo(map);
+  const t0=performance.now();
+  const step=(now)=>{ const p=Math.min(1,(now-t0)/dur); circle.setRadius(maxR*p); circle.setStyle({opacity:(1-p)*.7,fillOpacity:(1-p)*.07}); if(p<1) requestAnimationFrame(step); else map.removeLayer(circle); };
+  requestAnimationFrame(step);
+}
 /* ================= Boot ================= */
 document.addEventListener('DOMContentLoaded', ()=>{
   setupHome();
   renderOverview();
   initMap();
   renderTech();
+  setupRevealObserver();
+  applyHeaderScrollShadow();
+  animateCounter($('#kInst'), DATA.length, 900);
+  animateCounter($('#kCountry'), new Set(DATA.map(d=>d.country)).size, 900);
 });
 </script>
 </body>
