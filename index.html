@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Taiwan Lunar Collaboration — Interactive Site</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Leaflet (map) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    --bg:#050812; --panel:#0b1020; --card:#0f1b3d; --card2:#0b142f;
+    --br:#ffffff22; --text:#e6eeff; --muted:#9fb3d1;
+    --accent:#67e8f9; --accent2:#c084fc;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  a{color:inherit;text-decoration:none}
+  .container{max-width:1200px;margin:0 auto;padding:24px}
+  /* Header */
+  header{position:sticky;top:0;z-index:40;background:rgba(11,16,32,.7);backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--br)}
+  .bar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;max-width:1200px;margin:0 auto}
+  .brand{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:14px;background:linear-gradient(90deg,#7dd3fc,#d8b4fe);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px rgba(103,232,249,.9)}
+  nav a{font-size:14px;color:#cbd5e1;margin-left:18px}
+  nav a:hover{color:#fff}
+  section{padding:72px 0}
+  /* Top 3-panel (Home) */
+  .grid-top{display:grid;gap:16px}
+  @media(min-width:1100px){.grid-top{grid-template-columns:2fr 1.6fr 1.4fr}}
+  .card{background:linear-gradient(180deg,#0f193a 0%, #0b122b 100%);border:1px solid var(--br);
+        border-radius:14px;padding:16px;box-shadow:0 0 40px rgba(80,200,255,.08)}
+  .title{margin:0 0 8px;font-weight:700;font-size:18px}
+  .lead{color:#cfe0ff;margin:6px 0 12px}
+  ul.clean{margin:8px 0 0 18px;color:#c5d4f0}
+  ul.clean li{margin:6px 0}
+  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px}
+  .k{background:#ffffff08;border:1px solid var(--br);border-radius:12px;padding:12px;text-align:center}
+  .k .n{font-weight:800;font-size:26px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .chip{font-size:12px;border:1px solid #67e8f94d;background:#22d3ee1a;color:#a5f3fc;border-radius:999px;padding:6px 10px}
+  /* Quick filter */
+  .qf .row{display:flex;gap:8px;margin-top:10px}
+  .input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--br);background:#0a142e;color:var(--text)}
+  .sel{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--br);background:#0a142e;color:var(--text)}
+  .payloads{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .pbtn{border:1px solid var(--br);background:#ffffff0d;color:#d9edff;border-radius:999px;padding:6px 10px;cursor:pointer}
+  .pbtn.active{border-color:#67e8f9;background:#22d3ee1a;color:#a5f3fc}
+  .clear{font-size:12px;color:#cbd5e1;cursor:pointer}
+  .clear:hover{color:#fff;text-decoration:underline}
+  /* Results grid */
+  .results{display:grid;gap:16px;margin-top:18px}
+  @media(min-width:900px){.results{grid-template-columns:1fr 1fr}}
+  .card2{background:linear-gradient(180deg,#0f1c3d 0%, #0b142f 100%);border:1px solid var(--br);border-radius:12px;padding:16px}
+  .row{display:flex;align-items:flex-start;gap:10px}
+  .badge{display:inline-block;font-size:11px;border:1px solid #67e8f94d;background:#22d3ee1a;color:#a5f3fc;border-radius:999px;padding:4px 8px;margin-right:6px}
+  .muted{color:var(--muted)}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:10px;margin-top:6px}
+  .kv div:first-child{color:#b3c2de}
+  .contact a{display:inline-flex;align-items:center;gap:6px;margin-right:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--br);background:#ffffff08}
+  .contact svg{width:14px;height:14px}
+  /* Overview cards */
+  .grid{display:grid;gap:16px}
+  @media (min-width:900px){ .grid.cols-2{grid-template-columns:1fr 1fr} }
+  /* Map layout */
+  .map-wrap{display:grid;gap:16px}
+  @media (min-width:1100px){ .map-wrap{grid-template-columns:2fr 1fr} }
+  #map{width:100%;border-radius:14px;overflow:hidden;border:1px solid var(--br)}
+  .panel{background:linear-gradient(180deg,#0f1c3d 0%, #0b142f 100%);border:1px solid var(--br);border-radius:14px;padding:16px}
+  .li{background:#ffffff08;border:1px solid #ffffff1a;border-radius:10px;padding:10px;font-size:14px}
+  .li strong{color:#99f6e4}
+  footer{border-top:1px solid var(--br);color:#95a3bf;text-align:center;padding:28px 0;font-size:14px}
+  .fade-up{opacity:0;transform:translateY(10px);animation:up .6s .05s forwards}
+  @keyframes up{to{opacity:1;transform:none}}
+  #star{position:fixed;inset:0;z-index:-1}
+  /* tiny inline icon */
+  .icon{width:16px;height:16px;display:inline-block;vertical-align:-3px;opacity:.9}
+/* Technical Complementarity Cards */
+.tech-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+@media (min-width: 900px) {
+  .tech-grid { 
+    grid-template-columns: repeat(3, 1fr); 
+  }
+}
+@media (min-width: 1200px) {
+  .tech-grid { 
+    grid-template-columns: repeat(3, 1fr); 
+  }
+}
+
+.tech-card {
+  background: linear-gradient(180deg, #0f1c3d 0%, #0b142f 100%);
+  border: 1px solid var(--br);
+  border-radius: 14px;
+  padding: 32px 24px;
+  text-align: center;
+  position: relative;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+}
+
+.tech-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(103, 232, 249, 0.15);
+  border-color: rgba(103, 232, 249, 0.3);
+}
+
+.tech-icon {
+  font-size: 56px;
+  margin-bottom: 20px;
+  display: block;
+  opacity: 0.9;
+}
+
+.tech-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 16px;
+  color: #e6eeff;
+  line-height: 1.3;
+}
+
+.tech-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #c5d4f0;
+  margin: 0 0 20px;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  text-align: center;
+}
+
+.tech-badges {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.tech-badge {
+  font-size: 11px;
+  border: 1px solid #67e8f94d;
+  background: #22d3ee1a;
+  color: #a5f3fc;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 500;
+}
+
+</style>
+</head>
+<body>
+<canvas id="star" aria-hidden="true"></canvas>
+
+<header>
+  <div class="bar">
+    <a href="#home" class="brand"><span class="brand-dot"></span> Taiwan Lunar Payloads Collaboration Atlas</a>
+    <nav>
+      <a href="#home">Home</a>
+      <a href="#overview">Four Payloads Overview</a>
+      <a href="#mapsec">International Collaboration Map</a>
+      <a href="#tech">Technical Complementarity</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HOME -->
+<section id="home">
+  <div class="container">
+    <div class="grid-top">
+      <!-- Mission Focus -->
+      <div class="card">
+        <h3 class="title">Mission Focus</h3>
+        <p class="lead">This interactive site synthesizes international collaboration opportunities and technical complementarities for Taiwan’s four lunar payloads.</p>
+        <ul class="clean">
+          <li>Cross-calibration for spectral / thermal / UV instruments</li>
+          <li>Plasma–magnetic environment context for surface measurements</li>
+          <li>Pre-launch validation and analogue testing workflows</li>
+        </ul>
+      </div>
+
+      <!-- KPIs -->
+      <div class="card">
+        <h3 class="title">Overview</h3>
+        <div class="kpis">
+          <div class="k"><div class="n" id="kInst">–</div><div>Institutions</div></div>
+          <div class="k"><div class="n" id="kCountry">–</div><div>Countries</div></div>
+       
+        </div>
+   
+      </div>
+
+      <!-- Quick Filter -->
+      <div class="card qf">
+        <h3 class="title">Quick Filter</h3>
+        <input id="q" class="input" placeholder="Search institution / project / objective / complementarity" />
+        <div class="payloads" id="payloadBtns"></div>
+        <div class="row">
+          <select id="regionSel" class="sel"></select>
+          <select id="countrySel" class="sel"></select>
+        </div>
+        <div style="margin-top:10px"><span class="clear" id="clearBtn">Clear filters</span></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results" id="results" style="margin-top:18px"></div>
+  </div>
+</section>
+
+<!-- OVERVIEW -->
+<section id="overview">
+  <div class="container">
+    <h2 class="title">Four Payloads Overview</h2>
+    <p class="muted" style="margin:6px 0 14px">Core functions, platforms, and mission modes.</p>
+    <div class="grid cols-2" id="payloadGrid"></div>
+  </div>
+</section>
+
+<!-- MAP -->
+<section id="mapsec">
+  <div class="container">
+    <h2 class="title">International Collaboration Map</h2>
+    <p class="muted" style="margin:6px 0 14px">Explore partner locations and see which payloads they support.</p>
+    <div class="map-wrap">
+      <div class="card">
+        <div id="map"></div>
+        <p class="muted" id="mapNote" style="margin-top:8px;font-size:12px">
+          Click a marker to list collaborating institutions in that country.
+        </p>
+      </div>
+      <div class="panel">
+        <h3 style="margin:0 0 6px;font-size:16px">Selected Country</h3>
+        <div id="selCountry" class="muted">No country selected.</div>
+        <ul id="instList" style="list-style:none;padding:0;margin:10px 0 0;display:grid;gap:10px"></ul>
+
+        <div class="card" style="margin-top:14px">
+          <h4 style="margin:0 0 10px;font-size:14px">Summary</h4>
+          <div id="summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH -->
+<section id="tech">
+  <div class="container">
+    <h2 class="title">Technical Complementarity</h2>
+    <p class="muted" style="margin:6px 0 14px">Where international partners strengthen Taiwan’s payload science and engineering.</p>
+    <div class="grid cols-2" id="compGrid"></div>
+  </div>
+</section>
+
+<footer>
+  <strong>Analysis of International Collaboration for Taiwan's Lunar Payloads</strong><br>
+  <em>TASA Office of International Collaboration Intern Research Project · 2025</em>
+</footer>
+
+<script>
+/* ================= Starfield ================= */
+(() => {
+  const c=document.getElementById('star'), ctx=c.getContext('2d'); let w,h,stars=[],N=380;
+  const resize=()=>{w=c.width=innerWidth;h=c.height=innerHeight;stars=Array.from({length:N},()=>({x:Math.random()*w,y:Math.random()*h,z:Math.random()*.8+.2,v:.0006+Math.random()*.0006,r:.6+Math.random()}));};
+  const tick=()=>{ctx.clearRect(0,0,w,h); const g=ctx.createRadialGradient(w*.5,h*.45,0,w*.5,h*.45,Math.max(w,h));
+    g.addColorStop(0,"#0b1020");g.addColorStop(1,"#050812");ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    for(const s of stars){s.z+=s.v; if(s.z>1.2) s.z=.2; ctx.globalAlpha=.45+.45*Math.sin((s.z*7+s.x+s.y)*.002);
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r*(1.2+s.z),0,Math.PI*2); ctx.fillStyle="#cfe8ff"; ctx.fill();}
+    requestAnimationFrame(tick);
+  };
+  addEventListener('resize',resize); resize(); tick();
+})();
+
+/* ================= DATA ================= */
+/* 6 institutions (KASI merged). Contacts included. No "Priority A" shown. */
+const DATA = [
+  {
+    name:"NASA JPL / California Institute of Technology",
+    country:"USA", region:"North America",
+    projects:["Lunar Trailblazer + High-resolution Volatiles and Minerals Moon Mapper (HVM³) – Water Ice Detection"],
+    objectives:["Detect the distribution of water ice and water molecules on the lunar surface"],
+    complementarity:["LR-1/HVM³ spectral cross-calibration; LL-2 assists in shadow recognition"],
+    payloads:["LR-1","LL-2"],
+    stage:"Mission completed",
+    contact:"trailblazer-web@caltech.edu"
+  },
+  {
+    name:"University of Oxford",
+    country:"United Kingdom", region:"Europe",
+    projects:["Lunar Thermal Mapper (LTM) – Polar and Permanently Shadowed Region Surface Temperature Mapping"],
+    objectives:["Reveal the thermal properties and mineral composition of the lunar surface."],
+    complementarity:["LR-1: Thermal field correction for HVM³ and rover signals; LL-2: Mineral albedo and thermal noise verification"],
+    payloads:["LR-1","LL-2"],
+    stage:"Mission completed",
+    contact:"+44(0)1865272200"
+  },
+  {
+    name:"Boston University",
+    country:"USA", region:"North America",
+    projects:["Lunar Environment heliospheric (LEXI) X-ray Imager – Plasma and EUV background context"],
+    objectives:["Observe solar wind–moon interactions and global plasma variations"],
+    complementarity:["LR-2: Correlate solar-wind particle flux with near-surface plasma; LL-2: assess ionospheric impacts on UV background"],
+    payloads:["LR-2","LL-2"],
+    stage:"Ongoing",
+    contact:"bwalsh@bu.edu"
+  },
+  {
+    name:"University of Colorado Boulder",
+    country:"USA", region:"North America",
+    projects:["Lunar Compact Infrared Imaging System (L-CIRiS) – Thermal Infrared Imager"],
+    objectives:["Map temperature and emissivity to infer regolith properties"],
+    complementarity:["Joint UV–visible (LL-2) and thermal IR mapping; color-to-temperature fusion for regolith retrievals"],
+    payloads:["LR-1","LL-2"],
+    stage:"Preparing for launch",
+    contact:"Paul.Hayne@Colorado.edu"
+  },
+  {
+    name:"Korea Astronomy and Space Science Institute (KASI)",
+    country:"South Korea", region:"Asia",
+    projects:[
+      "Lunar Space Environment Monitor (LUSEM) – Space radiation & charged particle environment",
+      "Lunar Surface MAGnetometer (LSMAG) – Lunar vector magnetometer"
+    ],
+    objectives:[
+      "Record quantity and energy of high-energy protons and electrons from solar activity",
+      "Characterize how lunar magnetic fields are compressed by solar wind; track local magnetic field"
+    ],
+    complementarity:[
+      "LR-1 & LL-2: Track space weathering and photometric changes across illumination; LR-2: extends eV–keV spectrum",
+      "Works with LL-1-LVM to distinguish solar-wind compression from crustal remanent magnetism"
+    ],
+    payloads:["LR-1","LR-2","LL-1","LL-2"],
+    stage:"Preparing for launch",
+    contact:"+82-42-860-2114"
+  },
+  {
+    name:"University of Adelaide",
+    country:"Australia", region:"Oceania",
+    projects:["Exterres Environmental Testing Facility – Roo-ver Lunar Rover testing"],
+    objectives:["Simulate lunar environment to validate rover and instrument performance"],
+    complementarity:[
+      "LR-1: Lunar soil imaging verification; LR-2: plasma chamber tests",
+      "LL-1: Magnetic field simulation; LL-2: UV camera radiation tolerance"
+    ],
+    payloads:["LR-1","LR-2","LL-1","LL-2"],
+    stage:"Ongoing",
+    contact:"john.culton@adelaide.edu.au"
+  }
+];
+
+const PAYLOADS = [
+  { key:"ISP", title:"LR1 — Image/Spectrum Payload (ISP)", platform:"Lunar Rover 1 (LR1) · NTUST",
+    blurb:"High-resolution imaging and spectral analysis to map topography, terrain features, and quantify unknown surface materials.", 
+    emoji:"📸" },
+  { key:"LR2-AESA", title:"LR2 — All-sky Electrostatic Analyzer (A-ESA)", platform:"Lunar Rover 2 (LR2) · NCKU",
+    blurb:"Collects charged particles to explore the three-dimensional plasma environment at the lunar surface.", 
+    emoji:"⚡" },
+  { key:"LL1-LVM", title:"LL1 — Lunar Vector Magnetometer (LVM)", platform:"Lunar Lander 1 (LL1) · NCU",
+    blurb:"Triple three-axis fluxgate magnetometers to investigate solar-wind interactions with lunar magnetic anomalies.", 
+    emoji:"🧲" },
+  { key:"LL2-FLUTE", title:"LL2 — Formosa Lunar Ultraviolet Telescope Experiment (FLUTE)", platform:"Lunar Lander 2 (LL2) · NTHU",
+    blurb:"Dual wide-field UV and optical/NIR cameras for UV-sky (astronomy) and lunar terrain (terrain) observations.", 
+    emoji:"🔭" },
+];
+
+const COUNTRY_COORDS = {
+  "USA": [-98.5, 39.5],
+  "United Kingdom": [-3.436, 55.378],
+  "South Korea": [127.7669, 35.9078],
+  "Australia": [133.7751, -25.2744],
+};
+
+/* ================= Helpers ================= */
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>Array.from(el.querySelectorAll(s));
+function el(tag, attrs={}, children=[]){
+  const n=document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs)){
+    if(k==='class') n.className=v;
+    else if(k==='html') n.innerHTML=v;
+    else n.setAttribute(k,v);
+  }
+  (Array.isArray(children)?children:[children]).forEach(c=>{
+    n.appendChild(typeof c==='string'?document.createTextNode(c):c);
+  });
+  return n;
+}
+function svg(path){ return el('span',{class:'icon',html:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${path}"/></svg>`}); }
+const ICON_USER="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8";
+const ICON_MAIL="M4 4h16v16H4z M22 6l-10 7L2 6";
+const ICON_PHONE="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 5.18 2 2 0 0 1 4.06 3h3a2 2 0 0 1 2 1.72c.12.9.33 1.77.63 2.6a2 2 0 0 1-.45 2.11L8.09 10a16 16 0 0 0 6 6l.57-1.15a2 2 0 0 1 2.11-.45 12.3 12.3 0 0 0 2.6.63A2 2 0 0 1 22 16.92";
+
+/* ================= Home: filters + results ================= */
+const state = { q:"", payloads:new Set(), region:"All regions", country:"All countries" };
+const REGIONS = ["All regions", ...Array.from(new Set(DATA.map(d=>d.region)))];
+const COUNTRIES = ["All countries", ...Array.from(new Set(DATA.map(d=>d.country)))];
+
+function setupHome(){
+  $('#kInst').textContent = DATA.length;
+  $('#kCountry').textContent = new Set(DATA.map(d=>d.country)).size;
+
+  // payload multi-select chips
+  const pb = $("#payloadBtns");
+  ["LR-1","LR-2","LL-1","LL-2"].forEach(k=>{
+    const b=el('button',{class:'pbtn',type:'button'},k);
+    b.onclick=()=>{ state.payloads.has(k)?state.payloads.delete(k):state.payloads.add(k); b.classList.toggle('active'); renderResults(); };
+    pb.appendChild(b);
+  });
+
+  // region/country select
+  const rsel=$("#regionSel"), csel=$("#countrySel");
+  REGIONS.forEach(r=>rsel.appendChild(el('option',{value:r},r)));
+  COUNTRIES.forEach(c=>csel.appendChild(el('option',{value:c},c)));
+  rsel.value=state.region; csel.value=state.country;
+  rsel.onchange=()=>{state.region=rsel.value; renderResults();}
+  csel.onchange=()=>{state.country=csel.value; renderResults();}
+
+  // search
+  $("#q").oninput=(e)=>{state.q=e.target.value.trim().toLowerCase(); renderResults();}
+
+  // clear
+  $("#clearBtn").onclick=()=>{
+    state.q=""; $("#q").value="";
+    state.payloads.clear(); $$("#payloadBtns .pbtn").forEach(x=>x.classList.remove('active'));
+    state.region="All regions"; state.country="All countries";
+    rsel.value=state.region; csel.value=state.country; renderResults();
+  };
+
+  renderResults();
+}
+
+function passFilters(d){
+  if(state.region!=="All regions" && d.region!==state.region) return false;
+  if(state.country!=="All countries" && d.country!==state.country) return false;
+  if(state.payloads.size && !d.payloads.some(p=>state.payloads.has(p))) return false;
+  if(state.q){
+    const hay=[d.name,...d.projects,...d.objectives,...(d.complementarity||[])].join(" ").toLowerCase();
+    if(!hay.includes(state.q)) return false;
+  }
+  return true;
+}
+function contactNode(v){
+  const wrap = el('div',{class:'contact'}); if(!v) return wrap;
+  const isEmail = v.includes('@'); const isTel = /^\+?[0-9\-\(\)\s]+$/.test(v);
+  if(isEmail) wrap.appendChild(el('a',{href:`mailto:${v}`},[svg(ICON_MAIL),'Email']));
+  if(isTel) wrap.appendChild(el('a',{href:`tel:${v.replace(/\s/g,'')}`},[svg(ICON_PHONE),'Call']));
+  if(!isEmail && !isTel) wrap.appendChild(el('div',{class:'muted'},v));
+  return wrap;
+}
+function resultCard(d){
+  const head = el('div',{class:'row'},[
+    svg(ICON_USER),
+    el('div',{},[
+      el('div',{style:"font-weight:700;font-size:16px"},d.name),
+      el('div',{class:'muted'},`${d.country} · ${d.region}`)
+    ])
+  ]);
+  const payloads = el('div',{style:"margin-top:8px"});
+  d.payloads.forEach(p=>payloads.appendChild(el('span',{class:'badge'},p)));
+
+  const kv = el('div',{class:'kv'});
+  kv.appendChild(el('div',{},'Project'));
+  kv.appendChild(el('div',{}, d.projects.length? el('ul',{class:'clean',style:'margin-left:16px'}, d.projects.map(t=>el('li',{},t))) : el('div',{class:'muted'},'—')));
+  kv.appendChild(el('div',{},'Objective'));
+  kv.appendChild(el('div',{}, d.objectives.length? el('ul',{class:'clean',style:'margin-left:16px'}, d.objectives.map(t=>el('li',{},t))) : el('div',{class:'muted'},'—')));
+  kv.appendChild(el('div',{},'Key Collaboration'));
+  kv.appendChild(el('div',{}, (d.complementarity&&d.complementarity.length)? el('ul',{class:'clean',style:'margin-left:16px'}, d.complementarity.map(t=>el('li',{},t))) : el('div',{class:'muted'},'—')));
+  kv.appendChild(el('div',{},'Stage'));
+  kv.appendChild(el('div',{}, d.stage || '—'));
+  kv.appendChild(el('div',{},'Contact'));
+  kv.appendChild(el('div',{}, contactNode(d.contact)));
+
+  return el('div',{class:'card2'},[head,payloads,kv]);
+}
+function renderResults(){
+  const list = DATA.filter(passFilters);
+  const mount = $('#results'); mount.innerHTML='';
+  if(list.length===0){ mount.appendChild(el('div',{class:'card2'},'No results.')); return; }
+  list.forEach(d=>mount.appendChild(resultCard(d)));
+}
+
+/* ================= Overview (four payloads) ================= */
+function renderOverview(){
+  const grid = $('#payloadGrid'); grid.innerHTML='';
+  PAYLOADS.forEach(p=>{
+    const card = el('div',{class:'card'});
+    const head = el('div',{class:'row'});
+    const badge = el('span',{class:'badge',style:'font-size:16px;display:flex;align-items:center;gap:6px'},[
+  el('span',{},p.emoji || '📦'), 
+  p.title.split(' — ')[0]
+]);
+
+    head.appendChild(badge);
+    head.appendChild(el('div',{},[
+      el('div',{style:"font-weight:700;font-size:16px"},p.title),
+      el('div',{class:'muted'},p.platform)
+    ]));
+    const text = el('p',{class:'muted',style:'margin-top:8px;color:#dbe7ff'},p.blurb);
+    card.append(head,text); grid.appendChild(card);
+  });
+}
+
+/* ================= Map ================= */
+let map;
+function setMapHeight(){
+  const elc = document.getElementById('map');
+  const w = elc.offsetWidth || 800; elc.style.height = Math.round(w*9/16) + 'px';
+  if(map) setTimeout(()=>map.invalidateSize(),100);
+}
+function initMap(){
+  if(typeof L==='undefined'){ $('#mapNote').innerHTML='⚠️ Map library failed to load. Check network and retry.'; return; }
+  setMapHeight();
+  map = L.map('map',{zoomControl:true, worldCopyJump:true}).setView([20,10],2);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap & CARTO'}).addTo(map);
+
+  // aggregate by country
+  const byCountry={};
+  DATA.forEach(i=>{ (byCountry[i.country]=byCountry[i.country]||[]).push(i); });
+
+  Object.entries(byCountry).forEach(([country, list])=>{
+    const coord = COUNTRY_COORDS[country]; if(!coord) return;
+    const marker = L.circleMarker([coord[1],coord[0]],{radius:7,color:'#67e8f9',weight:2,fillColor:'#67e8f9',fillOpacity:.7}).addTo(map);
+    marker.bindTooltip(`${country} • ${list.length}`,{direction:'top',offset:[0,-8],opacity:.9});
+    marker.on('click',()=>renderSelectedCountry(country,list));
+  });
+
+  renderSummary();
+  addEventListener('resize', setMapHeight);
+}
+function renderSelectedCountry(country, list){
+  $('#selCountry').textContent = country;
+  const ul = $('#instList'); ul.innerHTML='';
+  list.forEach(i=>{
+    const li = el('li',{class:'li'});
+    li.appendChild(el('div',{style:'font-weight:600;margin-bottom:6px'}, i.name));
+    const badges = el('div'); i.payloads.forEach(pk=>badges.appendChild(el('span',{class:'badge'},pk)));
+    li.appendChild(badges);
+    ul.appendChild(li);
+  });
+}
+function renderSummary(){
+  const countries = new Set(DATA.map(d=>d.country));
+  const box = $('#summary'); box.innerHTML='';
+  function cell(num,label){
+    const d=el('div',{class:'li',style:'text-align:center'});
+    d.append(el('div',{style:'font-size:24px;font-weight:800;color:#fff;margin-bottom:2px'},String(num)));
+    d.append(el('div',{class:'muted'},label)); return d;
+  }
+  box.append(cell(DATA.length,'Institutions'));
+  box.append(cell(countries.size,'Countries'));
+  box.append(cell(4,'Payloads'));
+}
+
+/* ================= Technical Complementarity ================= */
+function renderTech(){
+  const techCategories = [
+    {
+      icon: "🔬",
+      title: "Spectral Cross-Calibration",
+      desc: "Cross-platform spectral data validation to enhance measurement accuracy and establish standardized calibration protocols.",
+      payloads: ["LR-1", "LL-2"]
+    },
+    {
+      icon: "🧲", 
+      title: "Magnetic Environment Network",
+      desc: "Establish synchronized lunar magnetic field monitoring to distinguish solar wind compression from crustal remanent magnetism.",
+      payloads: ["LL-1"]
+    },
+    {
+      icon: "🛰️",
+      title: "Multi-wavelength Observations", 
+      desc: "UV–optical–NIR mapping; thermal-IR via partner instruments to build comprehensive lunar surface property maps.",
+      payloads: ["LR-1", "LL-2"]
+    },
+    {
+      icon: "⚡",
+      title: "Plasma Environment Monitoring",
+      desc: "In-situ plasma measurements (eV–tens keV); field–particle coupling with LL-1 to enhance space-weather capability.",
+      payloads: ["LR-2"]
+    },
+    {
+      icon: "🔧",
+      title: "Ground Testing & Validation",
+      desc: "Utilize international partners' environmental simulation facilities for pre-flight instrument validation and system optimization.",
+      payloads: ["LR-1", "LR-2", "LL-1", "LL-2"]
+    }
+  ];
+
+  const grid = $('#compGrid'); 
+  grid.innerHTML = '';
+  grid.className = 'tech-grid';
+  
+  techCategories.forEach(category => {
+    const card = el('div', {class: 'tech-card'});
+    
+    const icon = el('div', {class: 'tech-icon'}, category.icon);
+    const title = el('h3', {class: 'tech-title'}, category.title);
+    const desc = el('div', {class: 'tech-desc'}, category.desc);
+    
+    const badges = el('div', {class: 'tech-badges'});
+    category.payloads.forEach(payload => {
+      badges.appendChild(el('span', {class: 'tech-badge'}, payload));
+    });
+    
+    card.append(icon, title, desc, badges);
+    grid.appendChild(card);
+  });
+}
+
+/* ================= Boot ================= */
+document.addEventListener('DOMContentLoaded', ()=>{
+  setupHome();
+  renderOverview();
+  initMap();
+  renderTech();
+});
+</script>
+</body>
+</html>
